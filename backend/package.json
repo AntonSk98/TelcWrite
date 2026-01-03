@@ -1,0 +1,23 @@
+{
+  "name": "telcwrite",
+  "version": "1.0.0",
+  "description": "Server-based HTML file manager with cross-browser persistence",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^4.18.0",
+    "lowdb": "^6.0.1",
+    "openai": "^6.15.0"
+  },
+  "keywords": [
+    "html",
+    "file-manager",
+    "web-app",
+    "persistence"
+  ],
+  "author": "",
+  "license": "ISC"
+}
