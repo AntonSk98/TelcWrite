@@ -66,8 +66,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     trackTextareaInput(contentTextarea);
 
-    submitBtn.disabled = true;
-
     async function initFeedbackSection() {
         const [score, feedback, correction] = await Promise.all([
             db.require(reviewScoreKey()),

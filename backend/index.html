@@ -43,7 +43,7 @@
                 <div class="d-flex gap-2">
                     <input type="text" id="newFilename" class="form-control bg-light border-0" 
                            placeholder="Enter document name...">
-                    <button class="btn btn-accent px-3 px-md-4 text-nowrap" onclick="createFile()">
+                    <button class="btn btn-accent px-3 px-md-4 text-nowrap" onclick="createDocument()">
                         <i class="bi bi-plus-lg d-md-none"></i>
                         <span class="d-none d-md-inline"><i class="bi bi-plus-lg me-1"></i> Create</span>
                     </button>
@@ -64,13 +64,13 @@
     <div id="status" class="alert-toast"></div>
 
     <script>
-        async function loadFiles() {
+        async function loadDocuments() {
             try {
-                const response = await fetch('/api/files');
-                const files = await response.json();
+                const response = await fetch('/api/documents');
+                const documents = await response.json();
                 const fileList = document.getElementById('fileList');
 
-                if (files.length === 0) {
+                if (documents.length === 0) {
                     fileList.innerHTML = `
                         <li class="text-center py-5 text-secondary">
                             <i class="bi bi-file-earmark-text fs-1 d-block mb-2 opacity-25"></i>
@@ -79,17 +79,20 @@
                     return;
                 }
 
-                fileList.innerHTML = files.map(file => `
+                fileList.innerHTML = documents.map(doc => `
                     <li class="file-item d-flex align-items-center justify-content-between p-2 p-md-3 rounded-2 mb-1" 
                         style="transition: background 0.15s;" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
-                        <a href="${file.path}" class="d-flex align-items-center gap-2 gap-md-3 text-decoration-none text-dark flex-grow-1">
+                        <a href="/doc/${doc.id}" class="d-flex align-items-center gap-2 gap-md-3 text-decoration-none text-dark flex-grow-1">
                             <span class="d-flex align-items-center justify-content-center rounded-2" 
                                   style="width: 36px; height: 36px; background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: var(--accent);">
                                 <i class="bi bi-file-text"></i>
                             </span>
-                            <span class="fw-medium">${file.title}</span>
+                            <div class="d-flex flex-column">
+                                <span class="fw-medium">${doc.title}</span>
+                                <small class="text-secondary">${doc.creationDate}</small>
+                            </div>
                         </a>
-                        <button class="btn btn-sm btn-delete text-secondary" onclick="event.preventDefault(); deleteFile('${file.name}')" title="Delete">
+                        <button class="btn btn-sm btn-delete text-secondary" onclick="event.preventDefault(); deleteDocument('${doc.id}', '${doc.title}')" title="Delete">
                             <i class="bi bi-trash3"></i>
                         </button>
                     </li>`).join('');
@@ -101,27 +104,27 @@
             }
         }
 
-        async function createFile() {
+        async function createDocument() {
             const input = document.getElementById('newFilename');
-            const filename = input.value.trim();
+            const title = input.value.trim();
 
-            if (!filename) {
+            if (!title) {
                 showStatus('Please enter a document name', 'danger');
                 return;
             }
 
             try {
-                const response = await fetch('/api/file', {
+                const response = await fetch('/api/documents', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filename })
+                    body: JSON.stringify({ title })
                 });
                 const result = await response.json();
 
                 if (response.ok) {
-                    showStatus(`"${result.filename}" created`, 'success');
+                    showStatus(`"${result.document.title}" created`, 'success');
                     input.value = '';
-                    loadFiles();
+                    loadDocuments();
                 } else {
                     showStatus(result.error, 'danger');
                 }
@@ -130,19 +133,17 @@
             }
         }
 
-        async function deleteFile(filename) {
-            if (!confirm(`Delete "${filename}"?`)) return;
+        async function deleteDocument(id, title) {
+            if (!confirm(`Delete "${title}"?`)) return;
 
             try {
-                const response = await fetch('/api/file', {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filename })
+                const response = await fetch(`/api/documents/${id}`, {
+                    method: 'DELETE'
                 });
 
                 if (response.ok) {
-                    showStatus(`"${filename}" deleted`, 'success');
-                    loadFiles();
+                    showStatus(`"${title}" deleted`, 'success');
+                    loadDocuments();
                 } else {
                     showStatus((await response.json()).error, 'danger');
                 }
@@ -159,10 +160,10 @@
         }
 
         document.getElementById('newFilename').addEventListener('keypress', e => {
-            if (e.key === 'Enter') createFile();
+            if (e.key === 'Enter') createDocument();
         });
 
-        loadFiles();
+        loadDocuments();
     </script>
 </body>
 
