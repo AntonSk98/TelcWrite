@@ -47,6 +47,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadSavedContent(taskTextarea, 'task');
     await loadSavedContent(contentTextarea, 'content');
 
+    trackWrittenWordsCount();
+
     submitBtn.addEventListener('click', () => reviewOnClick());
 
 
@@ -65,6 +67,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     enableAutosave(contentTextarea, 'content');
 
     trackTextareaInput(contentTextarea);
+
+    function trackWrittenWordsCount() {
+        const setWrittenWordsCount = () => {
+            const wordCountElement = document.getElementById('word-count');
+            const wordCount = countWords(contentTextarea.value);
+            wordCountElement.textContent = `${wordCount} words`;
+        }
+
+        setWrittenWordsCount();
+
+
+        contentTextarea.addEventListener('input', () => {
+            setWrittenWordsCount();
+        });
+    }
 
     async function initFeedbackSection() {
         const [score, feedback, correction] = await Promise.all([
@@ -129,13 +146,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderCorrection(text, container) {
         // Escape HTML first
         let escaped = text
+            .replace(/\\n/g, '\n')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/\n/g, '<br>'); // preserve line breaks
+            .replace(/\n/g, '<br>');
 
         // Regex to match --..-- and ++...++
         const regex = /--(.*?)--|\+\+(.*?)\+\+/g;
+
+        console.log('Rendering correction:', text, '\n', escaped);
 
         // Replace matches with HTML spans
         const html = escaped.replace(regex, (_, removed, added) => {
@@ -155,6 +175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         taskTextarea.disabled = true;
         contentTextarea.disabled = true;
         submitBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Review Again';
+        submitBtn.disabled = false;
     }
 
     function countWords(text) {
@@ -214,6 +235,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+
     function trackTextareaInput(textarea) {
         textarea.addEventListener('input', () => {
             if (!canSubmitWritingForReview()) {
@@ -262,10 +284,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function onContentBeingReviewed() {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="loader"></span> Processing...';
+        submitBtn.innerHTML = '<span class="loader"></span> Bitte warten...';
         submitBtn.classList.add('loading');
 
-        // Disable textareas during processing
+        // Disable textareas during reviewing
         taskTextarea.disabled = true;
         contentTextarea.disabled = true;
 

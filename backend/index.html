@@ -39,10 +39,10 @@
         <!-- Create New -->
         <div class="card border-0 shadow-sm rounded-3 mb-3">
             <div class="card-body p-3 p-md-4">
-                <label class="form-label small text-uppercase text-secondary fw-semibold">Create New Document</label>
+                <label class="form-label small text-uppercase text-secondary fw-semibold">Neue Übung erstellen</label>
                 <div class="d-flex gap-2">
                     <input type="text" id="newFilename" class="form-control bg-light border-0" 
-                           placeholder="Enter document name...">
+                           placeholder="Übungsname eingeben (z.B. E-Mail an Vermieter)...">
                     <button class="btn btn-accent px-3 px-md-4 text-nowrap" onclick="createDocument()">
                         <i class="bi bi-plus-lg d-md-none"></i>
                         <span class="d-none d-md-inline"><i class="bi bi-plus-lg me-1"></i> Create</span>
@@ -54,7 +54,7 @@
         <!-- File List -->
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-3 p-md-4">
-                <label class="form-label small text-uppercase text-secondary fw-semibold">Your Documents</label>
+                <label class="form-label small text-uppercase text-secondary fw-semibold">Meine Übungen</label>
                 <ul id="fileList" class="list-unstyled mb-0"></ul>
             </div>
         </div>
@@ -74,7 +74,7 @@
                     fileList.innerHTML = `
                         <li class="text-center py-5 text-secondary">
                             <i class="bi bi-file-earmark-text fs-1 d-block mb-2 opacity-25"></i>
-                            <span>No documents yet. Create your first one!</span>
+                            <span>Noch keine Übungen vorhanden. Erstellen Sie Ihre erste!</span>
                         </li>`;
                     return;
                 }
@@ -99,7 +99,7 @@
             } catch (error) {
                 document.getElementById('fileList').innerHTML = `
                     <li class="text-center py-4 text-danger">
-                        <i class="bi bi-exclamation-circle me-1"></i> Error loading documents
+                        <i class="bi bi-exclamation-circle me-1"></i> Fehler beim Laden der Übungen
                     </li>`;
             }
         }
@@ -109,7 +109,7 @@
             const title = input.value.trim();
 
             if (!title) {
-                showStatus('Please enter a document name', 'danger');
+                showStatus('Bitte geben Sie einen Namen ein', 'danger');
                 return;
             }
 
@@ -129,7 +129,7 @@
                     showStatus(result.error, 'danger');
                 }
             } catch (error) {
-                showStatus('Failed to create document', 'danger');
+                showStatus('Übung konnte nicht erstellt werden', 'danger');
             }
         }
 
