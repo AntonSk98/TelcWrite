@@ -2,7 +2,7 @@
 
 // Simple database using server-side JSON file for cross-browser persistence
 class ApiClient {
-    constructor(baseUrl = 'http://localhost:3000') {
+    constructor(baseUrl = '') {
         this.baseUrl = baseUrl;
     }
 
