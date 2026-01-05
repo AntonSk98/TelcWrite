@@ -1,4 +1,4 @@
-FROM node:20-alpin
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ RUN npm install --production
 
 # Copy application files
 COPY backend/ ./
-COPY generator/ ./generator/
+COPY template/ ./template/
 
 # Create data directory for persistent storage
 RUN mkdir -p /app/data

@@ -126,7 +126,7 @@ function generateId() {
 async function getData(key) {
     try {
         await db.read();
-        return db.data.content[key] || '';
+        return db.data.content[key] ?? '';
     } catch (error) {
         console.error('Database read error:', error);
         throw error;

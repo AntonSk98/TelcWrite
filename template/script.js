@@ -27,7 +27,7 @@ class ApiClient {
             const response = await fetch(`${this.baseUrl}/api/data/${encodeURIComponent(key)}`);
             if (response.ok) {
                 const data = await response.json();
-                return data.value || null;
+                return data.value ?? null;
             }
         } catch (error) {
             console.error('Server load failed:', error);
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const setWrittenWordsCount = () => {
             const wordCountElement = document.getElementById('word-count');
             const wordCount = countWords(contentTextarea.value);
-            wordCountElement.textContent = `${wordCount} words`;
+            wordCountElement.textContent = `${wordCount}`;
         }
 
         setWrittenWordsCount();
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             db.require(reviewCorrectionKey())
         ]);
 
-        if (!score || !feedback || !correction) {
+        if (score === null || !feedback || !correction) {
             return;
         }
 

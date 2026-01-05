@@ -18,7 +18,7 @@ const BASE_PATH = process.env.BASE_PATH || path.join(__dirname, '..');
 app.use(express.static(BASE_PATH));
 
 // Load template once at startup
-const TEMPLATE_PATH = path.join(BASE_PATH, 'generator', 'template.html');
+const TEMPLATE_PATH = path.join(BASE_PATH, 'template', 'template.html');
 const TEMPLATE = fs.readFileSync(TEMPLATE_PATH, 'utf8');
 
 // API Endpoint to retrieve data by key

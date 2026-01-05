@@ -42,7 +42,7 @@
                 <label class="form-label small text-uppercase text-secondary fw-semibold">Neue Übung erstellen</label>
                 <div class="d-flex gap-2">
                     <input type="text" id="newFilename" class="form-control bg-light border-0" 
-                           placeholder="Übungsname eingeben (z.B. E-Mail an Vermieter)...">
+                           placeholder="Titel">
                     <button class="btn btn-accent px-3 px-md-4 text-nowrap" onclick="createDocument()">
                         <i class="bi bi-plus-lg d-md-none"></i>
                         <span class="d-none d-md-inline"><i class="bi bi-plus-lg me-1"></i> Create</span>
@@ -156,7 +156,10 @@
             const status = document.getElementById('status');
             status.className = `alert-toast alert alert-${type} py-2 px-3 shadow-sm`;
             status.textContent = message;
-            setTimeout(() => status.className = 'alert-toast', 3000);
+            setTimeout(() => {
+                status.className = 'alert-toast';
+                status.textContent = '';
+            }, 3000);
         }
 
         document.getElementById('newFilename').addEventListener('keypress', e => {
