@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <style>
         :root { --accent: #6366f1; --accent-hover: #4f46e5; }
         body { background: #f8f9fc; }
@@ -69,6 +70,7 @@
                 const response = await fetch('/api/documents');
                 const documents = await response.json();
                 const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '';
 
                 if (documents.length === 0) {
                     fileList.innerHTML = `
@@ -79,23 +81,51 @@
                     return;
                 }
 
-                fileList.innerHTML = documents.map(doc => `
-                    <li class="file-item d-flex align-items-center justify-content-between p-2 p-md-3 rounded-2 mb-1" 
-                        style="transition: background 0.15s;" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
-                        <a href="/doc/${doc.id}" class="d-flex align-items-center gap-2 gap-md-3 text-decoration-none text-dark flex-grow-1">
-                            <span class="d-flex align-items-center justify-content-center rounded-2" 
-                                  style="width: 36px; height: 36px; background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: var(--accent);">
-                                <i class="bi bi-file-text"></i>
-                            </span>
-                            <div class="d-flex flex-column">
-                                <span class="fw-medium">${doc.title}</span>
-                                <small class="text-secondary">${doc.creationDate}</small>
-                            </div>
-                        </a>
-                        <button class="btn btn-sm btn-delete text-secondary" onclick="event.preventDefault(); deleteDocument('${doc.id}', '${doc.title}')" title="Delete">
-                            <i class="bi bi-trash3"></i>
-                        </button>
-                    </li>`).join('');
+                documents.forEach(doc => {
+                    const li = document.createElement('li');
+                    li.className = 'file-item d-flex align-items-center justify-content-between p-2 p-md-3 rounded-2 mb-1';
+                    li.style.transition = 'background 0.15s';
+                    li.onmouseover = () => li.style.background = '#f8f9fc';
+                    li.onmouseout = () => li.style.background = 'transparent';
+
+                    const link = document.createElement('a');
+                    link.href = `/doc/${encodeURIComponent(doc.id)}`;
+                    link.className = 'd-flex align-items-center gap-2 gap-md-3 text-decoration-none text-dark flex-grow-1';
+                    
+                    const iconSpan = document.createElement('span');
+                    iconSpan.className = 'd-flex align-items-center justify-content-center rounded-2';
+                    iconSpan.style.cssText = 'width: 36px; height: 36px; background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: var(--accent);';
+                    iconSpan.innerHTML = '<i class="bi bi-file-text"></i>';
+
+                    const textDiv = document.createElement('div');
+                    textDiv.className = 'd-flex flex-column';
+                    
+                    const titleSpan = document.createElement('span');
+                    titleSpan.className = 'fw-medium';
+                    titleSpan.textContent = doc.title; // Safe: textContent escapes HTML
+                    
+                    const dateSmall = document.createElement('small');
+                    dateSmall.className = 'text-secondary';
+                    dateSmall.textContent = doc.creationDate; // Safe: textContent escapes HTML
+                    
+                    textDiv.appendChild(titleSpan);
+                    textDiv.appendChild(dateSmall);
+                    link.appendChild(iconSpan);
+                    link.appendChild(textDiv);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn btn-sm btn-delete text-secondary';
+                    deleteBtn.title = 'Delete';
+                    deleteBtn.innerHTML = '<i class="bi bi-trash3"></i>';
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        deleteDocument(doc.id, doc.title);
+                    });
+
+                    li.appendChild(link);
+                    li.appendChild(deleteBtn);
+                    fileList.appendChild(li);
+                });
             } catch (error) {
                 document.getElementById('fileList').innerHTML = `
                     <li class="text-center py-4 text-danger">
@@ -122,7 +152,7 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    showStatus(`"${result.document.title}" created`, 'success');
+                    showStatus(`"${DOMPurify.sanitize(result.document.title)}" created`, 'success');
                     input.value = '';
                     loadDocuments();
                 } else {
@@ -142,7 +172,7 @@
                 });
 
                 if (response.ok) {
-                    showStatus(`"${title}" deleted`, 'success');
+                    showStatus(`"${DOMPurify.sanitize(title)}" deleted`, 'success');
                     loadDocuments();
                 } else {
                     showStatus((await response.json()).error, 'danger');

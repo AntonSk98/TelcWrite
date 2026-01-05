@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const he = require('he');
 
 // Load environment variables
 require('dotenv').config();
@@ -133,10 +134,10 @@ app.get('/doc/:id', async (req, res) => {
             return res.redirect('/');
         }
 
-        // Replace placeholders in template
+        // Replace placeholders in template (escaped to prevent XSS)
         const html = TEMPLATE
-            .replace(/{{filename}}/g, document.title)
-            .replace(/{{creationDate}}/g, document.creationDate);
+            .replace(/{{filename}}/g, he.encode(document.title))
+            .replace(/{{creationDate}}/g, he.encode(document.creationDate));
 
         res.send(html);
     } catch (error) {

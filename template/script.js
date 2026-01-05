@@ -155,8 +155,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Regex to match --..-- and ++...++
         const regex = /--(.*?)--|\+\+(.*?)\+\+/g;
 
-        console.log('Rendering correction:', text, '\n', escaped);
-
         // Replace matches with HTML spans
         const html = escaped.replace(regex, (_, removed, added) => {
             if (removed !== undefined) {
@@ -167,7 +165,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             return '';
         });
 
-        container.innerHTML = html;
+        // Sanitize with DOMPurify - only allow safe tags/attributes
+        container.innerHTML = DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: ['span', 'br'],
+            ALLOWED_ATTR: ['class']
+        });
     }
 
 
