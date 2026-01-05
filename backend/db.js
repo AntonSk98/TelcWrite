@@ -6,13 +6,8 @@ const { JSONFile } = require('lowdb/node');
 // Load environment variables
 require('dotenv').config();
 
-// Check for required environment variables
-if (!process.env.DB_PATH) {
-    throw new Error('DB_PATH environment variable is required. Please set it in your .env file.');
-}
-
-// LowDB setup
-const DB_PATH = path.join(path.resolve(process.env.DB_PATH));
+// LowDB setup - use DB_PATH from env or default to db.json
+const DB_PATH = path.resolve(process.env.DB_PATH || './db.json');
 const adapter = new JSONFile(DB_PATH);
 const db = new Low(adapter, { documents: [], content: {} });
 

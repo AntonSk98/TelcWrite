@@ -1,0 +1,9 @@
+**/node_modules
+**/.env
+**/*db.json
+.git
+.gitignore
+README.md
+LICENSE
+!backend/package.json
+!backend/package-lock.json

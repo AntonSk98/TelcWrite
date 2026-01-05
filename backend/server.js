@@ -13,10 +13,12 @@ const PORT = 3000;
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, '..'))); // Serve from project root
+
+const BASE_PATH = process.env.BASE_PATH || path.join(__dirname, '..');
+app.use(express.static(BASE_PATH));
 
 // Load template once at startup
-const TEMPLATE_PATH = path.join(__dirname, '..', 'generator', 'template.html');
+const TEMPLATE_PATH = path.join(BASE_PATH, 'generator', 'template.html');
 const TEMPLATE = fs.readFileSync(TEMPLATE_PATH, 'utf8');
 
 // API Endpoint to retrieve data by key
