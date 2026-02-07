@@ -76,8 +76,10 @@ app.post('/api/data/:documentId', async (req, res) => {
  */
 app.get('/api/documents', async (req, res) => {
     try {
-        const documents = await repository.getDocuments();
-        res.json(documents);
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+        const result = await repository.getDocuments({ page, limit });
+        res.json(result);
     } catch (error) {
         console.error('Error listing documents:', error);
         res.status(500).json({ error: 'Failed to list documents' });

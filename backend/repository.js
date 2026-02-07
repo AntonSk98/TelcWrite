@@ -27,12 +27,24 @@ async function initializeDatabase() {
 
 // ==================== DOCUMENT OPERATIONS ====================
 /**
- * Get all documents
- * @returns {Promise<Array<{id: string, title: string, creationDate: string}>>} List of documents
+ * Get documents with pagination
+ * @param {Object} options - Pagination options
+ * @param {number} [options.page=1] - Page number (1-based)
+ * @param {number} [options.limit=10] - Items per page
+ * @returns {Promise<{documents: Array, page: number, limit: number, totalItems: number, totalPages: number}>}
  */
-async function getDocuments() {
+async function getDocuments({ page = 1, limit = 5 } = {}) {
     await db.read();
-    return db.data.documents || [];
+    const allDocuments = (db.data.documents || []).slice().sort((a, b) => {
+        return new Date(b.creationDate) - new Date(a.creationDate);
+    });
+    const totalItems = allDocuments.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+    const safePage = Math.max(1, Math.min(page, totalPages));
+    const start = (safePage - 1) * limit;
+    const documents = allDocuments.slice(start, start + limit);
+
+    return { documents, page: safePage, limit, totalItems, totalPages };
 }
 
 /**
@@ -63,7 +75,7 @@ async function createDocument(title) {
     const document = {
         id: generateId(),
         title: title,
-        creationDate: new Date().toISOString().split('T')[0]
+        creationDate: new Date().toISOString()
     };
 
     db.data.documents.push(document);
