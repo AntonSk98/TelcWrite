@@ -194,6 +194,29 @@ app.get('/api/export', async (req, res) => {
     }
 });
 
+/** GET /api/db/export - Download raw database as JSON */
+app.get('/api/db/export', (req, res) => {
+    const dbPath = path.resolve(process.env.DB_PATH || './db.json');
+    res.download(dbPath, 'telcwrite-backup.json');
+});
+
+/** POST /api/db/import - Import database from JSON */
+app.post('/api/db/import', express.json({ limit: '10mb' }), async (req, res) => {
+    try {
+        const data = req.body;
+        if (!data || !Array.isArray(data.documents) || !Array.isArray(data.contents)) {
+            return res.status(400).json({ error: 'Ungültiges Datenbankformat' });
+        }
+        const dbPath = path.resolve(process.env.DB_PATH || './db.json');
+        fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+        await repository.initializeDatabase();
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error importing database:', error);
+        res.status(500).json({ error: 'Import fehlgeschlagen' });
+    }
+});
+
 // ==================== PAGE ROUTES ====================
 
 /** GET / - Serve the main index page */
@@ -224,6 +247,11 @@ app.get('/doc/:id', async (req, res) => {
     }
 });
 
+// Serve pdf-export.js
+app.get('/pdf-export.js', (req, res) => {
+    res.sendFile(path.join(__dirname, 'pdf-export.js'));
+});
+
 /** Redirect unknown HTML routes to home (exclude static files) */
 app.get('*', (req, res, next) => {
     // Let static files through (they have extensions)
@@ -231,11 +259,6 @@ app.get('*', (req, res, next) => {
         return next(); // Will result in 404 from Express
     }
     res.redirect('/');
-});
-
-// Serve pdf-export.js
-app.get('/pdf-export.js', (req, res) => {
-    res.sendFile(path.join(__dirname, 'pdf-export.js'));
 });
 
 app.listen(PORT, async () => {

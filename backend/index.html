@@ -18,7 +18,7 @@
         body {
             background: #f8f9fc;
         }
-
+        
         .btn-accent {
             background: var(--accent);
             border: none;
@@ -174,19 +174,46 @@
         <div class="toast-box" :class="toast.css" x-text="toast.message" x-show="toast.message" x-transition.opacity>
         </div>
 
-        <!-- Export -->
-        <button class="btn btn-accent rounded-circle position-fixed bottom-0 end-0 m-4 d-flex align-items-center justify-content-center fs-5"
-            style="width:48px;height:48px;z-index:1040" @click="exportPdf()" :disabled="exporting"
-            title="Als PDF speichern">
-            <i class="bi" :class="exporting ? 'bi-arrow-repeat spin' : 'bi-file-earmark-pdf'"></i>
-        </button>
+        <!-- FAB Group -->
+        <div class="position-fixed bottom-0 end-0 m-4 d-flex gap-2 align-items-end" style="z-index:1040">
+            <!-- PDF button -->
+            <button class="btn btn-accent rounded-circle d-flex align-items-center justify-content-center fs-5 shadow-sm"
+                style="width:48px;height:48px" @click="exportPdf()" :disabled="exporting"
+                title="Als PDF speichern">
+                <i class="bi" :class="exporting ? 'bi-arrow-repeat spin' : 'bi-file-earmark-pdf'"></i>
+            </button>
+            <!-- DB button + sub-menu -->
+            <div class="d-flex flex-column align-items-center gap-2"
+                @mouseenter="dbMenu = true" @mouseleave="dbMenu = false">
+                <div x-show="dbMenu" style="display:none"
+                    x-transition:enter.duration.400ms
+                    x-transition:leave.duration.400ms>
+                    <div class="d-flex flex-column align-items-center gap-2">
+                    <button class="btn btn-outline-secondary bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                        style="width:40px;height:40px" @click="exportDb()" title="Datenbank exportieren">
+                        <i class="bi bi-download"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                        style="width:40px;height:40px" @click="$refs.dbImport.click()" title="Datenbank importieren">
+                        <i class="bi bi-upload"></i>
+                    </button>
+                    <input type="file" accept=".json" x-ref="dbImport" hidden @change="importDb($event)">
+                    </div>
+                </div>
+                <button class="btn btn-outline-secondary bg-white rounded-circle d-flex align-items-center justify-content-center fs-5 shadow-sm"
+                    style="width:48px;height:48px"
+                    title="Datenbank">
+                    <i class="bi bi-archive"></i>
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
         function app() {
             return {
-                newTitle: '', documents: [], page: 1, pageSize: 5, totalItems: 0, totalPages: 1,
-                toast: { message: '', css: '' }, exporting: false,
+                newTitle: '', documents: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 1,
+                toast: { message: '', css: '' }, exporting: false, dbMenu: false,
 
                 get pageInfo() {
                     const start = (this.page - 1) * this.pageSize + 1;
@@ -282,6 +309,45 @@
                         this.showToast('Export fehlgeschlagen', 'danger');
                     } finally {
                         this.exporting = false;
+                    }
+                },
+
+                async exportDb() {
+                    try {
+                        const res = await fetch('/api/db/export');
+                        if (!res.ok) throw 0;
+                        const blob = await res.blob();
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = 'telcwrite-backup.json';
+                        a.click();
+                        URL.revokeObjectURL(a.href);
+                        this.dbMenu = false;
+                        this.showToast('Datenbank exportiert!', 'success');
+                    } catch {
+                        this.showToast('Export fehlgeschlagen', 'danger');
+                    }
+                },
+
+                async importDb(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    try {
+                        const text = await file.text();
+                        const data = JSON.parse(text);
+                        const res = await fetch('/api/db/import', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
+                        if (!res.ok) throw 0;
+                        this.showToast('Datenbank importiert!', 'success');
+                        this.dbMenu = false;
+                        this.load(1);
+                    } catch {
+                        this.showToast('Import fehlgeschlagen – ungültige Datei', 'danger');
+                    } finally {
+                        event.target.value = '';
                     }
                 }
             };
