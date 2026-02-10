@@ -153,6 +153,27 @@ async function generatePdf(data) {
             y += 3;
         }
 
+        // If no feedback, show notice + submission text
+        if (!item.reviewFeedback) {
+            need(8);
+            pdf.setFontSize(9);
+            pdf.setTextColor(...gray);
+            pdf.setFont('helvetica', 'italic');
+            pdf.text('Noch kein Feedback vorhanden', M, y);
+            y += 5;
+
+            if (item.submissionText) {
+                need(10);
+                pdf.setFontSize(10);
+                pdf.setTextColor(...accent);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text('Einreichung', M, y);
+                y += 5;
+                wrap(item.submissionText, 9, black, 3.8);
+                y += 3;
+            }
+        }
+
         // Thin separator
         if (i < data.length - 1) {
             y += 2;
