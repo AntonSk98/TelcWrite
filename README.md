@@ -18,6 +18,9 @@ Preparing for the TELC B1 writing exam is challenging without a teacher to revie
 - ✅ Visual markup showing errors and corrections
 - 📊 Score and feedback based on TELC B1 standards
 - 💾 Auto-save your work
+- 📄 Paginated document list
+- 📑 Export all exercises to PDF (with colored corrections)
+- 💿 Export and import database as JSON for backup/restore
 - 🐳 Easy Docker deployment
 
 ## Getting Started
