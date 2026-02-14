@@ -8,9 +8,10 @@ COPY backend/package*.json ./backend/
 # Install dependencies
 RUN cd backend && npm install --production
 
-# Copy application files (preserve directory structure)
+# Copy application files
 COPY backend/ ./backend/
-COPY template/ ./template/
+COPY public/ ./public/
+COPY views/ ./views/
 
 # Create data directory for persistent storage
 RUN mkdir -p /app/data

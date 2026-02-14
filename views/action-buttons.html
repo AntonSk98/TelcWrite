@@ -1,0 +1,105 @@
+<!-- Action Buttons Component -->
+<div class="fab-container position-fixed bottom-0 end-0 m-4 d-flex flex-column align-items-end gap-2"
+     x-data="actionButtons()">
+    <!-- DB Export/Import Group -->
+    <div class="d-flex flex-column align-items-end gap-2"
+        @mouseenter="dbMenu=true" @mouseleave="dbMenu=false">
+        <div x-cloak x-show="dbMenu"
+            x-transition:enter.duration.1000ms x-transition:leave.duration.900ms>
+            <div class="d-flex flex-column align-items-end gap-2">
+                <button class="fab-sm btn btn-primary rounded-circle shadow"
+                    @click="exportDb" title="DB exportieren">
+                    <i class="bi bi-download"></i>
+                </button>
+                <button class="fab-sm btn btn-primary rounded-circle shadow"
+                    @click="$refs.dbImport.click()" title="DB importieren">
+                    <i class="bi bi-upload"></i>
+                </button>
+            </div>
+        </div>
+        <button class="fab btn btn-primary rounded-circle shadow"
+            title="Datenbank">
+            <i class="bi bi-archive fs-5"></i>
+        </button>
+    </div>
+
+    <!-- PDF Export -->
+    <button class="fab btn btn-primary rounded-circle shadow"
+        @click="exportPdf" :disabled="exporting"
+        title="PDF Export">
+        <i class="bi bi-file-earmark-pdf fs-5"></i>
+    </button>
+    <input type="file" accept=".json" x-ref="dbImport" class="d-none" @change="importDb($event)">
+</div>
+
+<script>
+function actionButtons() {
+    return {
+        exporting: false,
+        dbMenu: false,
+
+        async exportPdf() {
+            this.exporting = true;
+            try {
+                const res = await fetch('/api/export/pdf');
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    this.$dispatch('show-toast', { message: err.error || 'Export fehlgeschlagen', type: 'danger' });
+                    return;
+                }
+                const blob = await res.blob();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'Klar.pdf';
+                a.click();
+                URL.revokeObjectURL(a.href);
+                this.$dispatch('show-toast', { message: 'PDF exportiert!', type: 'success' });
+            } catch (e) {
+                console.error('PDF export error:', e);
+                this.$dispatch('show-toast', { message: 'Export fehlgeschlagen', type: 'danger' });
+            } finally {
+                this.exporting = false;
+            }
+        },
+
+        async exportDb() {
+            try {
+                const res = await fetch('/api/db/export');
+                if (!res.ok) throw 0;
+                const blob = await res.blob();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'klar-backup.json';
+                a.click();
+                URL.revokeObjectURL(a.href);
+                this.dbMenu = false;
+                this.$dispatch('show-toast', { message: 'Datenbank exportiert!', type: 'success' });
+            } catch {
+                this.$dispatch('show-toast', { message: 'Export fehlgeschlagen', type: 'danger' });
+            }
+        },
+
+        async importDb(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                const res = await fetch('/api/db/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!res.ok) throw 0;
+                this.$dispatch('show-toast', { message: 'Datenbank importiert!', type: 'success' });
+                this.dbMenu = false;
+                htmx.ajax('GET', '/partials/text-list', '#text-list');
+            } catch {
+                this.$dispatch('show-toast', { message: 'Import fehlgeschlagen – ungültige Datei', type: 'danger' });
+            } finally {
+                event.target.value = '';
+            }
+        }
+    };
+}
+</script>

@@ -1,0 +1,141 @@
+/* ============================================================
+   Klar – Custom Styles
+   Bootstrap CSS variable overrides + minimal custom rules.
+   Everything else uses Bootstrap utility classes.
+   ============================================================ */
+
+/* --- Bootstrap overrides: Indigo brand color --- */
+:root,
+[data-bs-theme="light"] {
+    --bs-primary:          #6366f1;
+    --bs-primary-rgb:      99, 102, 241;
+    --bs-link-color:       #6366f1;
+    --bs-link-hover-color: #4f46e5;
+    --bs-body-bg:          #f8f9fc;
+}
+
+.container {
+    max-width:768px
+}
+
+.logo {
+    width:48px;
+    height:48px;
+    background:linear-gradient(135deg,var(--bs-primary),#818cf8);
+}
+
+.btn-primary {
+    --bs-btn-bg:           #6366f1;
+    --bs-btn-border-color: #6366f1;
+    --bs-btn-hover-bg:     #4f46e5;
+    --bs-btn-hover-border-color: #4f46e5;
+    --bs-btn-active-bg:    #4338ca;
+    --bs-btn-active-border-color: #4338ca;
+    --bs-btn-disabled-bg:  #6366f1;
+    --bs-btn-disabled-border-color: #6366f1;
+}
+
+.pagination {
+    --bs-pagination-color:        #6366f1;
+    --bs-pagination-active-bg:    #6366f1;
+    --bs-pagination-active-border-color: #6366f1;
+    --bs-pagination-focus-box-shadow: none;
+}
+
+/* --- Document list: delete button hover reveal --- */
+.file-item .btn-delete {
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.file-item:hover .btn-delete {
+    opacity: 1;
+}
+
+.file-item .btn-delete:hover {
+    color: #dc3545 !important;
+    background: #fff5f5;
+}
+
+@media (max-width: 576px) {
+    .file-item .btn-delete {
+        opacity: 1;
+    }
+}
+
+/* --- Document icon --- */
+.doc-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+    color: var(--bs-primary);
+}
+
+/* --- HTMX loading indicator --- */
+.htmx-indicator {
+    opacity: 0;
+    transition: opacity 200ms ease-in;
+}
+
+.htmx-request .htmx-indicator {
+    opacity: 1;
+}
+
+/* --- Template page: diff highlighting --- */
+.bg-removed {
+    background: #fee2e2;
+    color: #dc2626;
+    text-decoration: line-through;
+}
+
+.bg-added {
+    background: #dcfce7;
+    color: #16a34a;
+    font-weight: 500;
+}
+
+/* --- Template page: score display --- */
+.score-display {
+    font-size: 4rem;
+    line-height: 1;
+    color: var(--bs-primary);
+}
+
+/* --- Template page: accordion header buttons --- */
+.card-header .btn {
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.card-header .btn:focus,
+.card-header .btn:active,
+.card-header .btn.active {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+.card-header .btn:hover .text-secondary {
+    color: var(--bs-primary) !important;
+}
+
+/* --- Template page: textarea auto-sizing --- */
+textarea {
+    field-sizing: content;
+}
+
+/* --- Floating action buttons --- */
+.fab-container {
+    z-index: 1000;
+}
+
+.fab {
+    width: 48px;
+    height: 48px;
+}
+
+.fab-sm {
+    width: 40px;
+    height: 40px;
+}

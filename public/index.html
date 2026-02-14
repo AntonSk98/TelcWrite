@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+</head>
+
+<body>
+    <div class="container py-4 py-md-5"
+         x-data="initToasts()"
+         @show-toast.window="showToast($event.detail.message, $event.detail.type)">
+
+        <!-- Header -->
+        <header class="text-center mb-4">
+            <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+                <div class="logo d-flex align-items-center justify-content-center rounded-3 text-white fs-4">
+                    <i class="bi bi-feather"></i>
+                </div>
+                <h1 class="h2 fw-bold mb-0">Klar</h1>
+            </div>
+            <p class="text-secondary mb-0">Deutsch schreiben, besser werden.</p>
+        </header>
+
+        <!-- Create Text (HTMX partial) -->
+        <div hx-get="/partials/create-text" hx-trigger="load" hx-swap="innerHTML"></div>
+
+        <!-- Text List + Pagination (HTMX partial) -->
+        <div id="text-list" hx-get="/partials/text-list" hx-trigger="load, refreshList from:body" hx-swap="innerHTML">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-secondary mt-2 mb-0 small">Laden...</p>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div class="position-fixed top-0 end-0 m-3" style="z-index:1050" :class="toast.css" x-text="toast.message" x-show="toast.message" x-transition.opacity></div>
+
+        <!-- Action Buttons (Alpine.js - needs client-side JS for PDF/DB operations) -->
+        <div hx-get="/partials/action-buttons" hx-trigger="load" hx-swap="innerHTML"></div>
+    </div>
+
+    <script>
+        function initToasts() {
+            return {
+                toast: { message: '', css: '' },
+
+                showToast(message, type) {
+                    this.toast = { message, css: `alert alert-${type} py-2 px-3 shadow-sm` };
+                    setTimeout(() => { this.toast = { message: '', css: '' }; }, 3000);
+                }
+            };
+        }
+
+        // Listen for HTMX events to show toasts
+        document.addEventListener('htmx:responseError', () => {
+            window.dispatchEvent(new CustomEvent('show-toast', {
+                detail: { message: 'Etwas ist schiefgelaufen', type: 'danger' }
+            }));
+        });
+
+        // Listen for custom HX-Trigger toast events
+        document.addEventListener('showToast', (e) => {
+            const { message, type } = e.detail;
+            window.dispatchEvent(new CustomEvent('show-toast', {
+                detail: { message, type }
+            }));
+        });
+
+        // HTMX-triggered events from server HX-Trigger headers
+        document.addEventListener('documentCreated', () => {
+            window.dispatchEvent(new CustomEvent('show-toast', {
+                detail: { message: 'Aufsatz erstellt!', type: 'success' }
+            }));
+        });
+
+        document.addEventListener('documentDeleted', () => {
+            window.dispatchEvent(new CustomEvent('show-toast', {
+                detail: { message: 'Gelöscht', type: 'success' }
+            }));
+        });
+    </script>
+</body>
+
+</html>

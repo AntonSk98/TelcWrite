@@ -1,192 +1,188 @@
 /**
- * Klar PDF Export.
+ * Klar – Server-side PDF Export (PDFKit)
  */
+const PDFDocument = require('pdfkit');
 
-let _jsPDFReady = null;
+const ACCENT = '#6366f1';
+const BLACK = '#212529';
+const GRAY = '#8c8c96';
+const RED = '#dc2626';
+const GREEN = '#16a34a';
+const SEPARATOR = '#dcdce1';
 
-function loadJsPDF() {
-    if (_jsPDFReady) return _jsPDFReady;
-    _jsPDFReady = new Promise((resolve, reject) => {
-        if (window.jspdf?.jsPDF) return resolve(window.jspdf.jsPDF);
-        const s = document.createElement('script');
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js';
-        s.onload = () => resolve(window.jspdf.jsPDF);
-        s.onerror = () => reject(new Error('Failed to load jsPDF'));
-        document.head.appendChild(s);
+const M = 68;  // margin in points (~24mm)
+
+/**
+ * Generate a PDF from document data and return it as a Buffer.
+ * @param {Array<Object>} data - Documents with content
+ * @returns {Promise<Buffer>}
+ */
+function generatePdf(data) {
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ size: 'A4', margin: M });
+        const chunks = [];
+
+        doc.on('data', chunk => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+
+        const W = doc.page.width;
+
+        // ── Header ──
+        doc.fontSize(20).fillColor(ACCENT).font('Helvetica-Bold')
+            .text('Klar', M, M);
+
+        doc.fontSize(8).fillColor(GRAY).font('Helvetica')
+            .text(
+                new Date().toLocaleDateString('de-DE') + '  \u00b7  ' +
+                data.length + ' Dokument' + (data.length !== 1 ? 'e' : ''),
+                M, doc.y
+            );
+
+        doc.moveDown(0.3);
+        const lineY = doc.y;
+        doc.strokeColor(ACCENT).lineWidth(0.5)
+            .moveTo(M, lineY).lineTo(W - M, lineY).stroke();
+        doc.moveDown(1);
+
+        // ── Documents ──
+        data.forEach((item, i) => {
+            // Title + date
+            const titleY = doc.y;
+            doc.fontSize(15).fillColor(ACCENT).font('Helvetica-Bold')
+                .text(item.title || 'Ohne Titel', M, titleY, { width: W - M * 2 - 80 });
+
+            const d = item.creationDate
+                ? new Date(item.creationDate).toLocaleDateString('de-DE')
+                : '';
+            if (d) {
+                doc.fontSize(8).fillColor(GRAY).font('Helvetica')
+                    .text(d, M, titleY, { width: W - M * 2, align: 'right' });
+            }
+            doc.y = Math.max(doc.y, titleY + 18);
+
+            // Score
+            if (item.reviewScore != null) {
+                doc.fontSize(8).font('Helvetica-Bold').fillColor(BLACK)
+                    .text(item.reviewScore + ' / 45', M, doc.y);
+                doc.moveDown(0.3);
+            }
+
+            // Standard sections
+            [['Aufgabe', item.task],
+             ['Feedback', item.reviewFeedback]
+            ].forEach(([label, value]) => {
+                if (!value) return;
+                sectionLabel(doc, label);
+                doc.fontSize(9).fillColor(BLACK).font('Helvetica')
+                    .text(value, M, doc.y, { width: W - M * 2, lineGap: 1.5 });
+                doc.moveDown(0.5);
+            });
+
+            // Correction with colored diff
+            if (item.correction) {
+                sectionLabel(doc, 'Korrigierter Text');
+                renderCorrection(doc, item.correction, W);
+                doc.moveDown(0.5);
+            }
+
+            // If no feedback, show notice + submission
+            if (!item.reviewFeedback) {
+                doc.fontSize(9).fillColor(GRAY).font('Helvetica-Oblique')
+                    .text('Noch kein Feedback vorhanden', M, doc.y, { width: W - M * 2 });
+                doc.moveDown(0.3);
+
+                if (item.submissionText) {
+                    sectionLabel(doc, 'Einreichung');
+                    doc.fontSize(9).fillColor(BLACK).font('Helvetica')
+                        .text(item.submissionText, M, doc.y, { width: W - M * 2, lineGap: 1.5 });
+                    doc.moveDown(0.5);
+                }
+            }
+
+            // Separator between documents
+            if (i < data.length - 1) {
+                doc.moveDown(0.3);
+                checkPage(doc, 20);
+                const sepY = doc.y;
+                doc.strokeColor(SEPARATOR).lineWidth(0.15)
+                    .moveTo(M, sepY).lineTo(W - M, sepY).stroke();
+                doc.moveDown(1.2);
+            }
+        });
+
+        doc.end();
     });
-    return _jsPDFReady;
 }
 
-async function generatePdf(data) {
-    const jsPDF = await loadJsPDF();
-    const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
-    const W = pdf.internal.pageSize.getWidth();
-    const H = pdf.internal.pageSize.getHeight();
-    const M = 24;
-    const CW = W - M * 2;
-    let y = M;
+/** Print a section label (e.g. "Aufgabe", "Feedback") */
+function sectionLabel(doc, label) {
+    checkPage(doc, 20);
+    doc.fontSize(10).fillColor(ACCENT).font('Helvetica-Bold')
+        .text(label, M, doc.y);
+    doc.moveDown(0.2);
+}
 
-    const accent = [99, 102, 241]; // #6366f1
-    const black = [33, 37, 41];
-    const gray = [140, 140, 150];
-    const red = [220, 38, 38];   // #dc2626
-    const green = [22, 163, 74]; // #16a34a
+/**
+ * Render correction text with --removed-- in red strikethrough
+ * and ++added++ in green bold.
+ */
+function renderCorrection(doc, text, pageWidth) {
+    const CW = pageWidth - M * 2;
 
-    function need(h) { if (y + h > H - M) { pdf.addPage(); y = M; } }
+    // Parse into segments
+    const segments = [];
+    let last = 0;
+    text.replace(/--(.*?)--|\+\+(.*?)\+\+/g, (match, rm, add, idx) => {
+        if (idx > last) segments.push({ t: text.slice(last, idx), color: BLACK });
+        if (rm !== undefined) segments.push({ t: rm, color: RED, strike: true });
+        if (add !== undefined) segments.push({ t: add, color: GREEN, bold: true });
+        last = idx + match.length;
+    });
+    if (last < text.length) segments.push({ t: text.slice(last), color: BLACK });
 
-    function wrap(str, size, color, leading) {
-        pdf.setFontSize(size);
-        pdf.setTextColor(...color);
-        pdf.setFont('helvetica', 'normal');
-        pdf.splitTextToSize(str || '', CW).forEach(line => {
-            need(leading + 1);
-            pdf.text(line, M, y);
-            y += leading;
-        });
-    }
+    // Render word-by-word for wrapping
+    let x = M;
+    const fontSize = 9;
+    const lineHeight = fontSize * 1.4;
+    doc.fontSize(fontSize);
 
-    /** Render correction text with --removed-- in red and ++added++ in green */
-    function wrapCorrection(str, size, leading) {
-        if (!str) return;
-        pdf.setFontSize(size);
-        pdf.setFont('helvetica', 'normal');
-        // Parse into colored segments
-        const parts = [];
-        let last = 0;
-        str.replace(/--(.*?)--|\+\+(.*?)\+\+/g, (match, rm, add, idx) => {
-            if (idx > last) parts.push({ t: str.slice(last, idx), c: black });
-            if (rm !== undefined) { if (parts.length) parts.push({ t: ' ', c: black }); parts.push({ t: rm, c: red }); }
-            if (add !== undefined) { if (parts.length) parts.push({ t: ' ', c: black }); parts.push({ t: add, c: green }); }
-            last = idx + match.length;
-        });
-        if (last < str.length) parts.push({ t: str.slice(last), c: black });
+    segments.forEach(seg => {
+        const font = seg.bold ? 'Helvetica-Bold' : 'Helvetica';
+        doc.font(font).fillColor(seg.color);
 
-        // Render word by word, wrapping when line is full
-        let x = M;
-        need(leading + 1);
-        parts.forEach(({ t, c }) => {
-            pdf.setTextColor(...c);
-            t.split(/(\n)/).forEach(seg => {
-                if (seg === '\n') { y += leading; need(leading + 1); x = M; return; }
-                seg.split(/(\s+)/).forEach(word => {
-                    if (!word) return;
-                    const w = pdf.getTextWidth(word);
-                    if (x > M && x + w > M + CW) { y += leading; need(leading + 1); x = M; }
-                    pdf.text(word, x, y);
-                    x += w;
-                });
+        const lines = seg.t.split('\n');
+        lines.forEach((line, li) => {
+            if (li > 0) {
+                x = M;
+                doc.y += lineHeight;
+                checkPage(doc, lineHeight + 2);
+            }
+            const words = line.split(/(\s+)/);
+            words.forEach(word => {
+                if (!word) return;
+                const w = doc.widthOfString(word);
+                if (x > M && x + w > M + CW) {
+                    x = M;
+                    doc.y += lineHeight;
+                    checkPage(doc, lineHeight + 2);
+                }
+                doc.text(word, x, doc.y, { lineBreak: false, continued: false });
+                x += w;
             });
         });
-        y += leading;
-    }
-
-    // ── Header ──
-    pdf.setFontSize(20);
-    pdf.setTextColor(...accent);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Klar', M, y);
-    y += 6;
-    pdf.setFontSize(8);
-    pdf.setTextColor(...gray);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(
-        new Date().toLocaleDateString('de-DE') + '  \u00b7  ' +
-        data.length + ' Dokument' + (data.length !== 1 ? 'e' : ''),
-        M, y
-    );
-    y += 4;
-    pdf.setDrawColor(...accent);
-    pdf.setLineWidth(0.5);
-    pdf.line(M, y, W - M, y);
-    y += 10;
-
-    // ── Documents ──
-    data.forEach((item, i) => {
-        need(20);
-
-        // Title
-        pdf.setFontSize(15);
-        pdf.setTextColor(...accent);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(item.title || 'Ohne Titel', M, y);
-
-        // Date right-aligned
-        const d = item.creationDate ? new Date(item.creationDate).toLocaleDateString('de-DE') : '';
-        pdf.setFontSize(8);
-        pdf.setTextColor(...gray);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(d, W - M, y, { align: 'right' });
-        y += 5;
-
-        // Score
-        if (item.reviewScore != null) {
-            pdf.setFontSize(8);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(item.reviewScore + ' / 45', M, y);
-            y += 5;
-        }
-
-        // Sections
-        [['Aufgabe', item.task],
-        ['Feedback', item.reviewFeedback],
-        ].forEach(([label, value]) => {
-            if (!value) return;
-            need(10);
-            pdf.setFontSize(10);
-            pdf.setTextColor(...accent);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(label, M, y);
-            y += 5;
-            wrap(value, 9, black, 3.8);
-            y += 3;
-        });
-
-        // Korrektur with colored diff markers
-        if (item.correction) {
-            need(10);
-            pdf.setFontSize(10);
-            pdf.setTextColor(...accent);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('Korrigierter Text', M, y);
-            y += 5;
-            wrapCorrection(item.correction, 9, 3.8);
-            y += 3;
-        }
-
-        // If no feedback, show notice + submission text
-        if (!item.reviewFeedback) {
-            need(8);
-            pdf.setFontSize(9);
-            pdf.setTextColor(...gray);
-            pdf.setFont('helvetica', 'italic');
-            pdf.text('Noch kein Feedback vorhanden', M, y);
-            y += 5;
-
-            if (item.submissionText) {
-                need(10);
-                pdf.setFontSize(10);
-                pdf.setTextColor(...accent);
-                pdf.setFont('helvetica', 'bold');
-                pdf.text('Einreichung', M, y);
-                y += 5;
-                wrap(item.submissionText, 9, black, 3.8);
-                y += 3;
-            }
-        }
-
-        // Thin separator
-        if (i < data.length - 1) {
-            y += 2;
-            need(6);
-            pdf.setDrawColor(220, 220, 225);
-            pdf.setLineWidth(0.15);
-            pdf.line(M, y, W - M, y);
-            y += 8;
-        }
     });
 
-    pdf.save('Klar.pdf');
+    doc.y += lineHeight;
+    doc.x = M;
 }
 
-window.KlarExport = { generatePdf };
+/** Add a new page if remaining space is insufficient */
+function checkPage(doc, needed) {
+    const bottom = doc.page.height - M;
+    if (doc.y + needed > bottom) {
+        doc.addPage();
+    }
+}
 
+module.exports = { generatePdf };

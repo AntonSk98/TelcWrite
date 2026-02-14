@@ -8,17 +8,18 @@ require('dotenv').config();
 
 const repository = require('./repository');
 const openai = require('./openai');
+const pdfExport = require('./pdf-export');
 const app = express();
 const PORT = 3000;
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, '..')));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Load template once at startup
-const TEMPLATE_PATH = path.join(__dirname, '..', 'template', 'template.html');
-const TEMPLATE = fs.readFileSync(TEMPLATE_PATH, 'utf8');
+// View engine
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, '..', 'views'));
 
 // ==================== CONTENT API ====================
 
@@ -77,7 +78,7 @@ app.post('/api/data/:documentId', async (req, res) => {
 app.get('/api/documents', async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
-        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 5));
         const result = await repository.getDocuments({ page, limit });
         res.json(result);
     } catch (error) {
@@ -100,6 +101,8 @@ app.post('/api/documents', async (req, res) => {
 
     try {
         const document = await repository.createDocument(title.trim());
+        // Trigger HTMX list refresh + toast
+        res.set('HX-Trigger', 'refreshList, documentCreated');
         res.json({ success: true, document });
     } catch (error) {
         if (error === repository.DUPLICATE_DOCUMENT_ERROR) {
@@ -121,6 +124,8 @@ app.delete('/api/documents/:id', async (req, res) => {
     
     try {
         await repository.deleteDocument(id);
+        // Trigger HTMX list refresh + toast
+        res.set('HX-Trigger', 'refreshList, documentDeleted');
         res.json({ success: true });
     } catch (error) {
         if (error === repository.DOCUMENT_NOT_FOUND_ERROR) {
@@ -180,17 +185,25 @@ app.post('/api/content/review/:documentId', async (req, res) => {
 // ==================== EXPORT API ====================
 
 /**
- * GET /api/export
- * Export all documents with their content
- * @returns {Array} All documents with content
+ * GET /api/export/pdf
+ * Generate and download a PDF of all documents
  */
-app.get('/api/export', async (req, res) => {
+app.get('/api/export/pdf', async (req, res) => {
     try {
         const data = await repository.getAllDocumentsWithContent();
-        res.json(data);
+        if (!data || !data.length) {
+            return res.status(404).json({ error: 'Keine Daten zum Exportieren' });
+        }
+        const pdfBuffer = await pdfExport.generatePdf(data);
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="Klar.pdf"',
+            'Content-Length': pdfBuffer.length
+        });
+        res.send(pdfBuffer);
     } catch (error) {
-        console.error('Error exporting data:', error);
-        res.status(500).json({ error: 'Failed to export data' });
+        console.error('Error generating PDF:', error);
+        res.status(500).json({ error: 'PDF-Erstellung fehlgeschlagen' });
     }
 });
 
@@ -217,11 +230,162 @@ app.post('/api/db/import', express.json({ limit: '10mb' }), async (req, res) => 
     }
 });
 
-// ==================== PAGE ROUTES ====================
+// ==================== HTMX PARTIAL ROUTES ====================
 
-/** GET / - Serve the main index page */
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+/** GET /partials/create-text - Serve create text form partial */
+app.get('/partials/create-text', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'views', 'create-text.html'));
+});
+
+/** GET /partials/action-buttons - Serve action buttons partial */
+app.get('/partials/action-buttons', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'views', 'action-buttons.html'));
+});
+
+/**
+ * GET /partials/text-list - Server-rendered document list + pagination
+ * @query {number} page - Page number (default 1)
+ * @query {number} limit - Items per page (default 5)
+ */
+app.get('/partials/text-list', async (req, res) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 5));
+        const result = await repository.getDocuments({ page, limit });
+
+        const { documents, totalItems, totalPages } = result;
+
+        const formatDate = (iso) => {
+            const date = new Date(iso);
+            return isNaN(date) ? (iso || '') : date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        };
+
+        // Build document list HTML
+        let listHtml = '';
+        if (!documents.length) {
+            listHtml = `
+                <div class="text-center py-5 text-secondary">
+                    <i class="bi bi-file-earmark-text fs-1 d-block mb-2 opacity-25"></i>
+                    Noch keine Übungen. Jetzt die erste erstellen!
+                </div>`;
+        } else {
+            listHtml = '<ul class="list-unstyled mb-0">';
+            for (const doc of documents) {
+                const title = he.encode(doc.title);
+                const date = he.encode(formatDate(doc.creationDate));
+                const id = he.encode(doc.id);
+                listHtml += `
+                    <li class="file-item d-flex align-items-center justify-content-between p-2 p-md-3 rounded-2 mb-1">
+                        <a href="/doc/${id}"
+                           class="d-flex align-items-center gap-2 text-decoration-none text-dark flex-grow-1">
+                            <span class="doc-icon d-flex align-items-center justify-content-center rounded-2">
+                                <i class="bi bi-file-text"></i>
+                            </span>
+                            <div>
+                                <div class="fw-medium">${title}</div>
+                                <small class="text-secondary">${date}</small>
+                            </div>
+                        </a>
+                        <button class="btn btn-sm btn-delete text-secondary"
+                                hx-delete="/api/documents/${id}"
+                                hx-confirm="&quot;${title}&quot; wirklich löschen?"
+                                hx-swap="none">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </li>`;
+            }
+            listHtml += '</ul>';
+        }
+
+        // Build pagination HTML
+        let paginationHtml = '';
+        if (totalItems > 0) {
+            const start = (page - 1) * limit + 1;
+            const end = Math.min(page * limit, totalItems);
+            const pageInfo = `${start}–${end} von ${totalItems}`;
+
+            // Calculate visible pages
+            let pages;
+            if (totalPages <= 5) {
+                pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+            } else if (page <= 2) {
+                pages = [1, 2, 3, '…', totalPages];
+            } else if (page >= totalPages - 1) {
+                pages = [1, '…', totalPages - 2, totalPages - 1, totalPages];
+            } else {
+                pages = [1, '…', page, '…', totalPages];
+            }
+
+            let navItems = '';
+            if (totalPages > 1) {
+                // Previous button
+                navItems += `<li class="page-item ${page <= 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#"
+                       hx-get="/partials/text-list?page=${page - 1}&limit=${limit}"
+                       hx-target="#text-list" hx-swap="innerHTML">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>`;
+
+                // Page numbers
+                for (const p of pages) {
+                    if (p === '…') {
+                        navItems += `<li class="page-item disabled"><a class="page-link" href="#">…</a></li>`;
+                    } else {
+                        navItems += `<li class="page-item ${p === page ? 'active' : ''}">
+                            <a class="page-link" href="#"
+                               hx-get="/partials/text-list?page=${p}&limit=${limit}"
+                               hx-target="#text-list" hx-swap="innerHTML">${p}</a>
+                        </li>`;
+                    }
+                }
+
+                // Next button
+                navItems += `<li class="page-item ${page >= totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#"
+                       hx-get="/partials/text-list?page=${page + 1}&limit=${limit}"
+                       hx-target="#text-list" hx-swap="innerHTML">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>`;
+            }
+
+            // Page size selector
+            const sizeOptions = [5, 10, 25].map(s =>
+                `<option value="${s}" ${s === limit ? 'selected' : ''}>${s}</option>`
+            ).join('');
+
+            paginationHtml = `
+                <div class="mt-3 d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2">
+                    <small class="text-secondary">${he.encode(pageInfo)}</small>
+                    ${totalPages > 1 ? `<nav><ul class="pagination pagination-sm mb-0">${navItems}</ul></nav>` : ''}
+                    <div class="d-flex align-items-center gap-1">
+                        <small class="text-secondary text-nowrap">Pro Seite:</small>
+                        <select class="form-select form-select-sm" style="width:auto"
+                                hx-get="/partials/text-list" hx-target="#text-list" hx-swap="innerHTML"
+                                hx-include="this" name="limit"
+                                hx-vals='{"page": "1"}'
+                                hx-trigger="change">
+                            ${sizeOptions}
+                        </select>
+                    </div>
+                </div>`;
+        }
+
+        const html = `
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-3 p-md-4">
+                    <label class="form-label small text-uppercase text-secondary fw-semibold">Meine Übungen</label>
+                    ${listHtml}
+                    ${paginationHtml}
+                </div>
+            </div>`;
+
+        res.send(html);
+    } catch (error) {
+        console.error('Error rendering text-list partial:', error);
+        res.status(500).send('<div class="alert alert-danger">Fehler beim Laden der Liste</div>');
+    }
 });
 
 /** GET /doc/:id - Serve document editor page */
@@ -232,24 +396,18 @@ app.get('/doc/:id', async (req, res) => {
             return res.redirect('/');
         }
 
-        // Replace placeholders in template (escaped to prevent XSS)
-        const html = TEMPLATE
-            .replace(/{{documentId}}/g, he.encode(document.id))
-            .replace(/{{filename}}/g, he.encode(document.title))
-            .replace(/{{creationDate}}/g, he.encode(
-                new Date(document.creationDate).toLocaleString('de-DE')
-            ));
+        const content = await repository.getContent(req.params.id);
 
-        res.send(html);
+        res.render('template', {
+            documentId: document.id,
+            filename: document.title,
+            creationDate: new Date(document.creationDate).toLocaleString('de-DE'),
+            contentJson: JSON.stringify(content || {})
+        });
     } catch (error) {
         console.error('Error serving document:', error);
         res.redirect('/');
     }
-});
-
-// Serve pdf-export.js
-app.get('/pdf-export.js', (req, res) => {
-    res.sendFile(path.join(__dirname, 'pdf-export.js'));
 });
 
 /** Redirect unknown HTML routes to home (exclude static files) */
