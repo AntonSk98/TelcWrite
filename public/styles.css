@@ -1,5 +1,5 @@
 /* ============================================================
-   Klar – Custom Styles
+   Klar – Custom Styles (mobile-first)
    Bootstrap CSS variable overrides + minimal custom rules.
    Everything else uses Bootstrap utility classes.
    ============================================================ */
@@ -14,14 +14,25 @@
     --bs-body-bg:          #f8f9fc;
 }
 
+/* --- Layout --- */
 .container {
-    max-width:768px
+    max-width: 768px;
+}
+
+/* Safe-area padding for notched phones */
+body {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* Bottom clearance so content isn't hidden behind FABs */
+.main-content {
+    padding-bottom: 80px;
 }
 
 .logo {
-    width:48px;
-    height:48px;
-    background:linear-gradient(135deg,var(--bs-primary),#818cf8);
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--bs-primary), #818cf8);
 }
 
 .btn-primary {
@@ -42,14 +53,19 @@
     --bs-pagination-focus-box-shadow: none;
 }
 
-/* --- Document list: delete button hover reveal --- */
-.file-item .btn-delete {
-    opacity: 0;
-    transition: opacity 0.15s;
+/* --- Document list --- */
+.file-item {
+    transition: background 0.15s;
 }
 
-.file-item:hover .btn-delete {
+.file-item:active {
+    background: rgba(99, 102, 241, 0.06);
+}
+
+.file-item .btn-delete {
     opacity: 1;
+    min-width: 36px;
+    min-height: 36px;
 }
 
 .file-item .btn-delete:hover {
@@ -57,8 +73,14 @@
     background: #fff5f5;
 }
 
-@media (max-width: 576px) {
+/* Desktop: reveal on hover */
+@media (hover: hover) {
     .file-item .btn-delete {
+        opacity: 0;
+        transition: opacity 0.15s;
+    }
+
+    .file-item:hover .btn-delete {
         opacity: 1;
     }
 }
@@ -67,6 +89,7 @@
 .doc-icon {
     width: 36px;
     height: 36px;
+    flex-shrink: 0;
     background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
     color: var(--bs-primary);
 }
@@ -81,7 +104,7 @@
     opacity: 1;
 }
 
-/* --- Template page: diff highlighting --- */
+/* --- Diff highlighting --- */
 .bg-removed {
     background: #fee2e2;
     color: #dc2626;
@@ -94,14 +117,20 @@
     font-weight: 500;
 }
 
-/* --- Template page: score display --- */
+/* --- Score display (mobile-first sizing) --- */
 .score-display {
-    font-size: 4rem;
+    font-size: 3rem;
     line-height: 1;
     color: var(--bs-primary);
 }
 
-/* --- Template page: accordion header buttons --- */
+@media (min-width: 576px) {
+    .score-display {
+        font-size: 4rem;
+    }
+}
+
+/* --- Accordion header buttons --- */
 .card-header .btn {
     border: none !important;
     box-shadow: none !important;
@@ -120,14 +149,16 @@
     color: var(--bs-primary) !important;
 }
 
-/* --- Template page: textarea auto-sizing --- */
+/* --- Textarea auto-sizing (with fallback) --- */
 textarea {
     field-sizing: content;
+    min-height: 120px;
 }
 
 /* --- Floating action buttons --- */
 .fab-container {
     z-index: 1000;
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 .fab {
@@ -151,4 +182,23 @@ textarea {
     justify-content: center;
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(4px);
+}
+
+/* --- Toast safe area --- */
+.toast-container {
+    padding-top: env(safe-area-inset-top);
+}
+
+/* --- Create exercise form: wrap on small screens --- */
+.create-form {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.create-form input {
+    min-width: 0;
+}
+
+.create-form .btn {
+    flex-shrink: 0;
 }

@@ -3,21 +3,21 @@
         <label class="form-label small text-uppercase text-secondary fw-semibold">Meine Übungen</label>
 
         <% if (!documents.length) { %>
-            <div class="text-center py-5 text-secondary">
+            <div class="text-center py-4 text-secondary">
                 <i class="bi bi-file-earmark-text fs-1 d-block mb-2 opacity-25"></i>
-                Noch keine Übungen. Jetzt die erste erstellen!
+                <span class="small">Noch keine Übungen. Jetzt die erste erstellen!</span>
             </div>
         <% } else { %>
             <ul class="list-unstyled mb-0">
                 <% for (const doc of documents) { %>
-                    <li class="file-item d-flex align-items-center justify-content-between p-2 p-md-3 rounded-2 mb-1">
+                    <li class="file-item d-flex align-items-center justify-content-between p-2 rounded-2 mb-1">
                         <a href="/doc/<%= doc.id %>"
-                           class="d-flex align-items-center gap-2 text-decoration-none text-dark flex-grow-1">
+                           class="d-flex align-items-center gap-2 text-decoration-none text-dark flex-grow-1 overflow-hidden">
                             <span class="doc-icon d-flex align-items-center justify-content-center rounded-2">
                                 <i class="bi bi-file-text"></i>
                             </span>
-                            <div>
-                                <div class="fw-medium"><%= doc.title %></div>
+                            <div class="overflow-hidden">
+                                <div class="fw-medium text-truncate"><%= doc.title %></div>
                                 <small class="text-secondary"><%= formatDate(doc.creationDate) %></small>
                             </div>
                         </a>
@@ -37,7 +37,7 @@
                 const start = (page - 1) * limit + 1;
                 const end = Math.min(page * limit, totalItems);
             %>
-            <div class="mt-3 d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2">
+            <div class="mt-3 d-flex flex-column align-items-center gap-2">
                 <small class="text-secondary"><%= start %>–<%= end %> von <%= totalItems %></small>
 
                 <% if (totalPages > 1) { %>
@@ -84,7 +84,7 @@
                     </nav>
                 <% } %>
 
-                <div class="d-flex align-items-center gap-1">
+                <div class="d-none d-sm-flex align-items-center gap-1">
                     <small class="text-secondary text-nowrap">Pro Seite:</small>
                     <select class="form-select form-select-sm" style="width:auto"
                             hx-get="/partials/text-list" hx-target="#text-list" hx-swap="innerHTML"
