@@ -1,10 +1,6 @@
-const path = require('path');
 const { Low } = require('lowdb');
 const { JSONFile } = require('lowdb/node');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
-
-// LowDB setup
-const DB_PATH = path.resolve(process.env.DB_PATH || path.join(__dirname, 'db.json'));
+const { DB_PATH } = require('./config');
 const adapter = new JSONFile(DB_PATH);
 const db = new Low(adapter, { documents: [], contents: [] });
 

@@ -1,15 +1,7 @@
 const OpenAI = require('openai');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
-
-// Check for required environment variables
-if (!process.env.OPENAI_TOKEN) {
-    throw new Error('OPENAI_TOKEN environment variable is required. Please set it in your .env file.');
-}
-if (!process.env.MODEL) {
-    throw new Error('MODEL environment variable is required. Please set it in your .env file.');
-}
+const { OPENAI_TOKEN, MODEL } = require('./config');
 
 const REVIEW_PROMPT = fs.readFileSync(
     path.join(__dirname, 'prompt-review.txt'),
@@ -18,7 +10,7 @@ const REVIEW_PROMPT = fs.readFileSync(
 
 // Initialize OpenAI client
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_TOKEN,
+    apiKey: OPENAI_TOKEN,
 });
 
 /**
@@ -32,7 +24,7 @@ const openai = new OpenAI({
 async function reviewContent(reviewContentCommand) {
     try {
         const completion = await openai.chat.completions.create({
-            model: process.env.MODEL,
+            model: MODEL,
             messages: [
                 {
                     role: 'system',

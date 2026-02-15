@@ -2,24 +2,20 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const he = require('he');
-
-// Load environment variables
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
-
+const { DB_PATH, VIEWS_DIR, PUBLIC_DIR, PORT } = require('./config');
 const repository = require('./repository');
 const openai = require('./openai');
 const pdfExport = require('./pdf-export');
 const app = express();
-const PORT = 3000;
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(PUBLIC_DIR));
 
 // View engine
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, '..', 'views'));
+app.set('views', VIEWS_DIR);
 
 // ==================== CONTENT API ====================
 
@@ -209,8 +205,7 @@ app.get('/api/export/pdf', async (req, res) => {
 
 /** GET /api/db/export - Download raw database as JSON */
 app.get('/api/db/export', (req, res) => {
-    const dbPath = path.resolve(process.env.DB_PATH || path.join(__dirname, 'db.json'));
-    res.download(dbPath, 'klar_backup.json');
+    res.download(DB_PATH, 'klar_backup.json');
 });
 
 /** POST /api/db/import - Import database from JSON */
@@ -220,8 +215,7 @@ app.post('/api/db/import', express.json({ limit: '10mb' }), async (req, res) => 
         if (!data || !Array.isArray(data.documents) || !Array.isArray(data.contents)) {
             return res.status(400).json({ error: 'Ungültiges Datenbankformat' });
         }
-        const dbPath = path.resolve(process.env.DB_PATH || path.join(__dirname, 'db.json'));
-        fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+        fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
         await repository.initializeDatabase();
         res.json({ success: true });
     } catch (error) {
@@ -234,12 +228,12 @@ app.post('/api/db/import', express.json({ limit: '10mb' }), async (req, res) => 
 
 /** GET /partials/create-text - Serve create text form partial */
 app.get('/partials/create-text', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'views', 'create-text.html'));
+    res.sendFile(path.join(VIEWS_DIR, 'create-text.html'));
 });
 
 /** GET /partials/action-buttons - Serve action buttons partial */
 app.get('/partials/action-buttons', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'views', 'action-buttons.html'));
+    res.sendFile(path.join(VIEWS_DIR, 'action-buttons.html'));
 });
 
 /**
