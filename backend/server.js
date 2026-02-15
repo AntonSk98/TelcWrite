@@ -4,7 +4,7 @@ const path = require('path');
 const he = require('he');
 
 // Load environment variables
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const repository = require('./repository');
 const openai = require('./openai');
@@ -209,7 +209,7 @@ app.get('/api/export/pdf', async (req, res) => {
 
 /** GET /api/db/export - Download raw database as JSON */
 app.get('/api/db/export', (req, res) => {
-    const dbPath = path.resolve(process.env.DB_PATH || './db.json');
+    const dbPath = path.resolve(process.env.DB_PATH || path.join(__dirname, 'db.json'));
     res.download(dbPath, 'klar_backup.json');
 });
 
@@ -220,7 +220,7 @@ app.post('/api/db/import', express.json({ limit: '10mb' }), async (req, res) => 
         if (!data || !Array.isArray(data.documents) || !Array.isArray(data.contents)) {
             return res.status(400).json({ error: 'Ungültiges Datenbankformat' });
         }
-        const dbPath = path.resolve(process.env.DB_PATH || './db.json');
+        const dbPath = path.resolve(process.env.DB_PATH || path.join(__dirname, 'db.json'));
         fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
         await repository.initializeDatabase();
         res.json({ success: true });

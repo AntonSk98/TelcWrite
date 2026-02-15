@@ -3,10 +3,10 @@ FROM node:20-alpine3.19
 WORKDIR /app
 
 # Copy package files
-COPY backend/package*.json ./backend/
+COPY package*.json ./
 
 # Install dependencies
-RUN cd backend && npm install --production
+RUN npm install --production
 
 # Copy application files
 COPY backend/ ./backend/

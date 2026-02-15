@@ -57,11 +57,10 @@ docker rm klar      # Remove
 
 1. **Install dependencies:**
    ```bash
-   cd backend
    npm install
    ```
 
-2. **Create `.env` file in `backend/`:**
+2. **Create `.env` file in the project root:**
    ```env
    OPENAI_TOKEN=your-openai-api-key
    MODEL=gpt-5.2
@@ -73,6 +72,28 @@ docker rm klar      # Remove
    ```
 
 Open http://localhost:3000
+
+## Project Structure
+
+```
+Klar/
+├── package.json          # Dependencies and scripts
+├── .env                  # Environment variables (not tracked)
+├── Dockerfile
+├── backend/
+│   ├── server.js         # Express server and API routes
+│   ├── repository.js     # LowDB database operations
+│   ├── openai.js         # OpenAI API integration
+│   ├── pdf-export.js     # Server-side PDF generation (PDFKit)
+│   ├── prompt-review.txt # AI review prompt template
+├── public/               # Static assets served by Express
+│   ├── index.html        # Main page shell
+│   └── styles.css        # Shared styles (Bootstrap overrides)
+└── views/                # Server-rendered templates and partials
+    ├── template.ejs      # Document editor page (EJS)
+    ├── create-text.html  # New document form (HTMX partial)
+    └── action-buttons.html # FAB buttons (HTMX partial)
+```
 
 ## Usage
 
@@ -92,10 +113,11 @@ Open http://localhost:3000
 
 ## Tech Stack
 
-- **Backend:** Node.js, Express
+- **Backend:** Node.js, Express, EJS
 - **Database:** LowDB (JSON file)
 - **AI:** OpenAI API
-- **Frontend:** Bootstrap 5, Vanilla JS
+- **Frontend:** Bootstrap 5, HTMX, Alpine.js
+- **PDF:** PDFKit (server-side)
 - **Deployment:** Docker
 
 ## License
