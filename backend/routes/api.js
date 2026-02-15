@@ -104,9 +104,6 @@ router.delete('/documents/:id', async (req, res) => {
  */
 router.post('/content/review/:documentId', async (req, res) => {
     const { documentId } = req.params;
-    if (!documentId) {
-        return res.status(400).json({ error: 'documentId is required' });
-    }
 
     try {
         const content = await repository.getContent(documentId);

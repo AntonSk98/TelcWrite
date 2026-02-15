@@ -22,5 +22,5 @@ module.exports = {
     DB_PATH,
     VIEWS_DIR,
     PUBLIC_DIR,
-    PORT: 3000,
+    PORT: parseInt(process.env.PORT, 10) || 3000,
 };
