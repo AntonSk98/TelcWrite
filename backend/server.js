@@ -101,7 +101,7 @@ app.post('/api/documents', async (req, res) => {
         res.set('HX-Trigger', 'refreshList, documentCreated');
         res.json({ success: true, document });
     } catch (error) {
-        if (error === repository.DUPLICATE_DOCUMENT_ERROR) {
+        if (error.code === repository.DUPLICATE_DOCUMENT) {
             return res.status(400).json({ error: error.message });
         }
 
@@ -124,8 +124,8 @@ app.delete('/api/documents/:id', async (req, res) => {
         res.set('HX-Trigger', 'refreshList, documentDeleted');
         res.json({ success: true });
     } catch (error) {
-        if (error === repository.DOCUMENT_NOT_FOUND_ERROR) {
-            return res.status(404).json({ error: 'Document not found' });
+        if (error.code === repository.DOCUMENT_NOT_FOUND) {
+            return res.status(404).json({ error: error.message });
         }
         console.error('Error deleting document:', error);
         res.status(500).json({ error: 'Failed to delete document' });
