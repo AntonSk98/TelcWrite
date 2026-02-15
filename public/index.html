@@ -17,6 +17,14 @@
          x-data="initToasts()"
          @show-toast.window="showToast($event.detail.message, $event.detail.type)">
 
+        <!-- Full-page loading overlay -->
+        <div class="global-loader" x-data="{ loading: false }"
+             @global-loading.window="loading = $event.detail.show"
+             x-show="loading" x-transition.opacity>
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-secondary mt-2 mb-0 small">Übung wird erstellt...</p>
+        </div>
+
         <!-- Header -->
         <header class="text-center mb-4">
             <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
@@ -28,8 +36,8 @@
             <p class="text-secondary mb-0">Deutsch schreiben, besser werden.</p>
         </header>
 
-        <!-- Create Text (HTMX partial) -->
-        <div hx-get="/partials/create-text" hx-trigger="load" hx-swap="innerHTML"></div>
+        <!-- Create Exercise (HTMX partial) -->
+        <div hx-get="/partials/create-exercise" hx-trigger="load" hx-swap="innerHTML"></div>
 
         <!-- Text List + Pagination (HTMX partial) -->
         <div id="text-list" hx-get="/partials/text-list" hx-trigger="load, refreshList from:body" hx-swap="innerHTML">

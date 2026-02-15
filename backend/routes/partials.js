@@ -7,9 +7,9 @@ const router = express.Router();
 
 // ==================== HTMX PARTIALS ====================
 
-/** GET /partials/create-text */
-router.get('/partials/create-text', (req, res) => {
-    res.sendFile(path.join(VIEWS_DIR, 'create-text.html'));
+/** GET /partials/create-exercise */
+router.get('/partials/create-exercise', (req, res) => {
+    res.sendFile(path.join(VIEWS_DIR, 'create-exercise.html'));
 });
 
 /** GET /partials/action-buttons */

@@ -99,6 +99,37 @@ router.delete('/documents/:id', async (req, res) => {
 // ==================== REVIEW ====================
 
 /**
+ * POST /api/exercises/generate
+ * Generate a new exercise with AI-created title and task, then redirect to it
+ */
+router.post('/exercises/generate', async (req, res) => {
+    const MAX_RETRIES = 3;
+    const instructions = req.body.instructions?.trim() || '';
+
+    try {
+        let lastError;
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            const { title, task } = await openai.generateExercise(instructions);
+            try {
+                const document = await repository.createDocument(title);
+                await repository.upsertContent({ documentId: document.id, task });
+                return res.json({ success: true, documentId: document.id });
+            } catch (error) {
+                if (error.code === repository.DUPLICATE_DOCUMENT) {
+                    lastError = error;
+                    continue;
+                }
+                throw error;
+            }
+        }
+        res.status(409).json({ error: 'Titel existiert bereits. Bitte erneut versuchen.' });
+    } catch (error) {
+        console.error('Error generating exercise:', error);
+        res.status(500).json({ error: 'Failed to generate exercise' });
+    }
+});
+
+/**
  * POST /api/content/review/:documentId
  * Submit document content for AI review
  */

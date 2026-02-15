@@ -139,3 +139,16 @@ textarea {
     width: 40px;
     height: 40px;
 }
+
+/* --- Global loading overlay --- */
+.global-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(4px);
+}
