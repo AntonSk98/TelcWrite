@@ -1,7 +1,7 @@
 const OpenAI = require('openai');
 const fs = require('fs');
 const path = require('path');
-const { OPENAI_TOKEN, MODEL } = require('./config');
+const { OPENAI_TOKEN, MODEL } = require('../config');
 
 const REVIEW_PROMPT = fs.readFileSync(
     path.join(__dirname, 'prompt-review.txt'),

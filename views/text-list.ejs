@@ -1,0 +1,102 @@
+<div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-3 p-md-4">
+        <label class="form-label small text-uppercase text-secondary fw-semibold">Meine Übungen</label>
+
+        <% if (!documents.length) { %>
+            <div class="text-center py-5 text-secondary">
+                <i class="bi bi-file-earmark-text fs-1 d-block mb-2 opacity-25"></i>
+                Noch keine Übungen. Jetzt die erste erstellen!
+            </div>
+        <% } else { %>
+            <ul class="list-unstyled mb-0">
+                <% for (const doc of documents) { %>
+                    <li class="file-item d-flex align-items-center justify-content-between p-2 p-md-3 rounded-2 mb-1">
+                        <a href="/doc/<%= doc.id %>"
+                           class="d-flex align-items-center gap-2 text-decoration-none text-dark flex-grow-1">
+                            <span class="doc-icon d-flex align-items-center justify-content-center rounded-2">
+                                <i class="bi bi-file-text"></i>
+                            </span>
+                            <div>
+                                <div class="fw-medium"><%= doc.title %></div>
+                                <small class="text-secondary"><%= formatDate(doc.creationDate) %></small>
+                            </div>
+                        </a>
+                        <button class="btn btn-sm btn-delete text-secondary"
+                                hx-delete="/api/documents/<%= doc.id %>"
+                                hx-confirm="&quot;<%= doc.title %>&quot; wirklich löschen?"
+                                hx-swap="none">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </li>
+                <% } %>
+            </ul>
+        <% } %>
+
+        <% if (totalItems > 0) { %>
+            <%
+                const start = (page - 1) * limit + 1;
+                const end = Math.min(page * limit, totalItems);
+            %>
+            <div class="mt-3 d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2">
+                <small class="text-secondary"><%= start %>–<%= end %> von <%= totalItems %></small>
+
+                <% if (totalPages > 1) { %>
+                    <%
+                        let pages;
+                        if (totalPages <= 5) {
+                            pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+                        } else if (page <= 2) {
+                            pages = [1, 2, 3, '…', totalPages];
+                        } else if (page >= totalPages - 1) {
+                            pages = [1, '…', totalPages - 2, totalPages - 1, totalPages];
+                        } else {
+                            pages = [1, '…', page, '…', totalPages];
+                        }
+                    %>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item <%= page <= 1 ? 'disabled' : '' %>">
+                                <a class="page-link" href="#"
+                                   hx-get="/partials/text-list?page=<%= page - 1 %>&limit=<%= limit %>"
+                                   hx-target="#text-list" hx-swap="innerHTML">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            <% for (const p of pages) { %>
+                                <% if (p === '…') { %>
+                                    <li class="page-item disabled"><a class="page-link" href="#">…</a></li>
+                                <% } else { %>
+                                    <li class="page-item <%= p === page ? 'active' : '' %>">
+                                        <a class="page-link" href="#"
+                                           hx-get="/partials/text-list?page=<%= p %>&limit=<%= limit %>"
+                                           hx-target="#text-list" hx-swap="innerHTML"><%= p %></a>
+                                    </li>
+                                <% } %>
+                            <% } %>
+                            <li class="page-item <%= page >= totalPages ? 'disabled' : '' %>">
+                                <a class="page-link" href="#"
+                                   hx-get="/partials/text-list?page=<%= page + 1 %>&limit=<%= limit %>"
+                                   hx-target="#text-list" hx-swap="innerHTML">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                <% } %>
+
+                <div class="d-flex align-items-center gap-1">
+                    <small class="text-secondary text-nowrap">Pro Seite:</small>
+                    <select class="form-select form-select-sm" style="width:auto"
+                            hx-get="/partials/text-list" hx-target="#text-list" hx-swap="innerHTML"
+                            hx-include="this" name="limit"
+                            hx-vals='{"page": "1"}'
+                            hx-trigger="change">
+                        <% for (const s of [5, 10, 25]) { %>
+                            <option value="<%= s %>" <%= s === limit ? 'selected' : '' %>><%= s %></option>
+                        <% } %>
+                    </select>
+                </div>
+            </div>
+        <% } %>
+    </div>
+</div>
