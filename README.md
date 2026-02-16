@@ -77,30 +77,35 @@ Open http://localhost:3000
 
 ```
 Klar/
-├── package.json          # Dependencies and scripts
-├── .env                  # Environment variables (not tracked)
+├── package.json
 ├── Dockerfile
+├── .env                    # Environment variables (not tracked)
 ├── backend/
-│   ├── server.js         # Express server setup
-│   ├── repository.js     # SQLite database operations
-│   ├── config.js         # Configuration and env vars
-│   ├── klar.sqlite       # SQLite database (auto-created)
+│   ├── server.js           # Express server setup
+│   ├── config.js           # Configuration and env vars
+│   ├── repository.js       # SQLite database operations
+│   ├── klar.sqlite         # SQLite database (auto-created)
 │   ├── routes/
-│   │   ├── api.js        # REST API routes
-│   │   └── partials.js   # HTMX partial routes
+│   │   ├── api.js          # REST API endpoints
+│   │   └── partials.js     # HTMX partial routes
 │   └── services/
-│       ├── openai.js     # OpenAI API integration
-│       ├── pdf-export.js # PDF generation (PDFKit)
-│       └── prompt-*.txt  # AI prompt templates
-├── public/               # Static assets
-│   ├── index.html        # Main page shell
-│   ├── styles.css        # Custom styles
-│   ├── manifest.json     # PWA manifest
-│   ├── service-worker.js             # Service Worker
-│   └── icons/            # PWA icons
-└── views/                # Server-rendered templates
-    ├── template.ejs      # Document editor page
-    └── *.html            # HTMX partials
+│       ├── openai.js       # OpenAI API integration
+│       ├── pdf-export.js   # PDF generation
+│       ├── prompt-generate.txt
+│       └── prompt-review.txt
+├── public/
+│   ├── index.html          # Main SPA shell
+│   ├── styles.css          # Custom styles
+│   ├── manifest.json       # PWA manifest
+│   ├── service-worker.js   # PWA service worker
+│   └── icons/
+│       ├── icon-192.svg
+│       └── icon-512.svg
+└── views/
+    ├── template.ejs        # Document editor page
+    ├── text-list.ejs       # Document list partial
+    ├── create-exercise.html
+    └── action-buttons.html
 ```
 
 ## Usage
@@ -116,8 +121,9 @@ Klar/
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `OPENAI_TOKEN` | Yes | Your OpenAI API key |
-| `MODEL` | Yes | OpenAI model to use (e.g., `gpt-5.2`) |
-| `DB_PATH` | No | Database file path |
+| `MODEL` | Yes | OpenAI model to use (e.g., `gpt-4o`) |
+| `PORT` | No | Server port (default: 3000) |
+| `DB_PATH` | No | SQLite database path (default: `backend/klar.sqlite`) |
 
 ## Tech Stack
 

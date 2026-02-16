@@ -19,8 +19,8 @@ RUN mkdir -p /app/data
 # Expose port
 EXPOSE 3000
 
-# Set default DB path for Docker
-ENV DB_PATH=/app/data/klar_db.json
+# Set default DB path for Docker (SQLite)
+ENV DB_PATH=/app/data/klar.sqlite
 
 # Environment variable validation script
 RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
