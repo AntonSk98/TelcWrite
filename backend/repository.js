@@ -1,9 +1,9 @@
-const { Low } = require('lowdb');
-const { JSONFile } = require('lowdb/node');
-const { DB_PATH } = require('./config');
+const Database = require('better-sqlite3');
+const path = require('path');
 
-const adapter = new JSONFile(DB_PATH);
-const db = new Low(adapter, { documents: [], contents: [] });
+// Database path
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'klar.sqlite');
+const db = new Database(DB_PATH);
 
 // Error codes (Node.js convention)
 const DUPLICATE_DOCUMENT = 'DUPLICATE_DOCUMENT';
@@ -15,65 +15,70 @@ function createError(code, message) {
     return error;
 }
 
-/** Sort documents by creation date (newest first) */
-function sortByNewest(docs) {
-    return docs.slice().sort((a, b) => new Date(b.creationDate) - new Date(a.creationDate));
-}
-
 /**
- * Initialize the database on startup
+ * Initialize the database - create tables if they don't exist
  */
-async function initializeDatabase() {
-    await db.read();
-    console.log('💾 Database initialized successfully');
+function initializeDatabase() {
+    db.pragma('foreign_keys = ON');
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS documents (
+            id TEXT PRIMARY KEY,
+            title TEXT UNIQUE NOT NULL,
+            creationDate TEXT NOT NULL
+        );
+        
+        CREATE TABLE IF NOT EXISTS contents (
+            documentId TEXT PRIMARY KEY,
+            task TEXT DEFAULT '',
+            submissionText TEXT DEFAULT '',
+            reviewScore INTEGER,
+            reviewFeedback TEXT DEFAULT '',
+            correction TEXT DEFAULT '',
+            FOREIGN KEY (documentId) REFERENCES documents(id) ON DELETE CASCADE
+        );
+    `);
+
+    console.log('💾 Database initialized');
 }
 
 // ==================== DOCUMENT OPERATIONS ====================
 
 /**
  * Get documents with pagination
- * @param {Object} options - Pagination options
- * @param {number} [options.page=1] - Page number (1-based)
- * @param {number} [options.limit=5] - Items per page
- * @returns {Promise<{documents: Array, page: number, limit: number, totalItems: number, totalPages: number}>}
  */
-async function getDocuments({ page = 1, limit = 5 } = {}) {
-    await db.read();
-    const allDocuments = sortByNewest(db.data.documents || []);
-    const totalItems = allDocuments.length;
+function getDocuments({ page = 1, limit = 5 } = {}) {
+    const countStmt = db.prepare('SELECT COUNT(*) as count FROM documents');
+    const totalItems = countStmt.get().count;
     const totalPages = Math.max(1, Math.ceil(totalItems / limit));
     const safePage = Math.max(1, Math.min(page, totalPages));
-    const start = (safePage - 1) * limit;
+    const offset = (safePage - 1) * limit;
 
-    return {
-        documents: allDocuments.slice(start, start + limit),
-        page: safePage,
-        limit,
-        totalItems,
-        totalPages,
-    };
+    const stmt = db.prepare(`
+        SELECT id, title, creationDate 
+        FROM documents 
+        ORDER BY creationDate DESC 
+        LIMIT ? OFFSET ?
+    `);
+    const documents = stmt.all(limit, offset);
+
+    return { documents, page: safePage, limit, totalItems, totalPages };
 }
 
 /**
  * Get a document by ID
- * @param {string} id - Document ID
- * @returns {Promise<{id: string, title: string, creationDate: string}|null>}
  */
-async function getDocument(id) {
-    await db.read();
-    return db.data.documents.find(doc => doc.id === id) || null;
+function getDocument(id) {
+    const stmt = db.prepare('SELECT id, title, creationDate FROM documents WHERE id = ?');
+    return stmt.get(id) || null;
 }
 
 /**
  * Create a new document
- * @param {string} title - Document title
- * @returns {Promise<{id: string, title: string, creationDate: string}>} Created document
- * @throws {Error} code=DUPLICATE_DOCUMENT if title already exists
  */
-async function createDocument(title) {
-    await db.read();
-
-    if (db.data.documents.some(doc => doc.title === title)) {
+function createDocument(title) {
+    const checkStmt = db.prepare('SELECT id FROM documents WHERE title = ?');
+    if (checkStmt.get(title)) {
         throw createError(DUPLICATE_DOCUMENT, 'Document with this title already exists');
     }
 
@@ -83,32 +88,31 @@ async function createDocument(title) {
         creationDate: new Date().toISOString(),
     };
 
-    db.data.documents.push(document);
-    await db.write();
+    const insertStmt = db.prepare(`
+        INSERT INTO documents (id, title, creationDate) 
+        VALUES (@id, @title, @creationDate)
+    `);
+    insertStmt.run(document);
+
     return document;
 }
 
 /**
  * Delete a document and its associated content
- * @param {string} id - Document ID
- * @throws {Error} code=DOCUMENT_NOT_FOUND if not found
  */
-async function deleteDocument(id) {
-    await db.read();
-
-    const docIndex = db.data.documents.findIndex(doc => doc.id === id);
-    if (docIndex === -1) {
+function deleteDocument(id) {
+    const checkStmt = db.prepare('SELECT id FROM documents WHERE id = ?');
+    if (!checkStmt.get(id)) {
         throw createError(DOCUMENT_NOT_FOUND, 'Document not found');
     }
 
-    db.data.documents.splice(docIndex, 1);
+    const deleteContent = db.prepare('DELETE FROM contents WHERE documentId = ?');
+    const deleteDoc = db.prepare('DELETE FROM documents WHERE id = ?');
 
-    const contentIndex = db.data.contents.findIndex(c => c.documentId === id);
-    if (contentIndex !== -1) {
-        db.data.contents.splice(contentIndex, 1);
-    }
-
-    await db.write();
+    db.transaction(() => {
+        deleteContent.run(id);
+        deleteDoc.run(id);
+    })();
 }
 
 /** Generate a unique ID */
@@ -120,23 +124,20 @@ function generateId() {
 
 /**
  * Get content for a document
- * @param {string} documentId
- * @returns {Promise<Object>} Content object or empty object if not found
  */
-async function getContent(documentId) {
-    await db.read();
-    return db.data.contents.find(c => c.documentId === documentId) || {};
+function getContent(documentId) {
+    const stmt = db.prepare(`
+        SELECT documentId, task, submissionText, reviewScore, reviewFeedback, correction 
+        FROM contents 
+        WHERE documentId = ?
+    `);
+    return stmt.get(documentId) || {};
 }
 
 /**
  * Upsert content (insert or replace)
- * @param {Object} upsertContentCommand
- * @param {string} upsertContentCommand.documentId - Required
- * @throws {Error} If documentId is missing
  */
-async function upsertContent(upsertContentCommand) {
-    await db.read();
-
+function upsertContent(upsertContentCommand) {
     if (!upsertContentCommand.documentId) {
         throw new Error('Missing documentId in content');
     }
@@ -150,38 +151,31 @@ async function upsertContent(upsertContentCommand) {
         correction: upsertContentCommand.correction ?? '',
     };
 
-    const index = db.data.contents.findIndex(
-        c => c.documentId === upsertContentCommand.documentId
-    );
-
-    if (index !== -1) {
-        db.data.contents.splice(index, 1, content);
-    } else {
-        db.data.contents.push(content);
-    }
-
-    await db.write();
+    const stmt = db.prepare(`
+        INSERT OR REPLACE INTO contents 
+        (documentId, task, submissionText, reviewScore, reviewFeedback, correction)
+        VALUES (@documentId, @task, @submissionText, @reviewScore, @reviewFeedback, @correction)
+    `);
+    stmt.run(content);
 }
 
 /**
  * Get all documents with their associated content (for export/PDF)
- * @returns {Promise<Array<Object>>}
  */
-async function getAllDocumentsWithContent() {
-    await db.read();
-    return sortByNewest(db.data.documents || []).map(doc => {
-        const content = (db.data.contents || []).find(c => c.documentId === doc.id) || {};
-        return {
-            id: doc.id,
-            title: doc.title,
-            creationDate: doc.creationDate,
-            task: content.task || '',
-            submissionText: content.submissionText || '',
-            reviewScore: content.reviewScore ?? null,
-            reviewFeedback: content.reviewFeedback || '',
-            correction: content.correction || '',
-        };
-    });
+function getAllDocumentsWithContent() {
+    const stmt = db.prepare(`
+        SELECT 
+            d.id, d.title, d.creationDate,
+            COALESCE(c.task, '') as task,
+            COALESCE(c.submissionText, '') as submissionText,
+            c.reviewScore,
+            COALESCE(c.reviewFeedback, '') as reviewFeedback,
+            COALESCE(c.correction, '') as correction
+        FROM documents d
+        LEFT JOIN contents c ON d.id = c.documentId
+        ORDER BY d.creationDate DESC
+    `);
+    return stmt.all();
 }
 
 module.exports = {

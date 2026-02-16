@@ -81,18 +81,26 @@ Klar/
 ├── .env                  # Environment variables (not tracked)
 ├── Dockerfile
 ├── backend/
-│   ├── server.js         # Express server and API routes
-│   ├── repository.js     # LowDB database operations
-│   ├── openai.js         # OpenAI API integration
-│   ├── pdf-export.js     # Server-side PDF generation (PDFKit)
-│   ├── prompt-review.txt # AI review prompt template
-├── public/               # Static assets served by Express
+│   ├── server.js         # Express server setup
+│   ├── repository.js     # SQLite database operations
+│   ├── config.js         # Configuration and env vars
+│   ├── klar.sqlite       # SQLite database (auto-created)
+│   ├── routes/
+│   │   ├── api.js        # REST API routes
+│   │   └── partials.js   # HTMX partial routes
+│   └── services/
+│       ├── openai.js     # OpenAI API integration
+│       ├── pdf-export.js # PDF generation (PDFKit)
+│       └── prompt-*.txt  # AI prompt templates
+├── public/               # Static assets
 │   ├── index.html        # Main page shell
-│   └── styles.css        # Shared styles (Bootstrap overrides)
-└── views/                # Server-rendered templates and partials
-    ├── template.ejs      # Document editor page (EJS)
-    ├── create-text.html  # New document form (HTMX partial)
-    └── action-buttons.html # FAB buttons (HTMX partial)
+│   ├── styles.css        # Custom styles
+│   ├── manifest.json     # PWA manifest
+│   ├── service-worker.js             # Service Worker
+│   └── icons/            # PWA icons
+└── views/                # Server-rendered templates
+    ├── template.ejs      # Document editor page
+    └── *.html            # HTMX partials
 ```
 
 ## Usage
@@ -114,12 +122,62 @@ Klar/
 ## Tech Stack
 
 - **Backend:** Node.js, Express, EJS
-- **Database:** LowDB (JSON file)
+- **Database:** SQLite (better-sqlite3)
 - **AI:** OpenAI API
 - **Frontend:** Bootstrap 5, HTMX, Alpine.js
 - **PDF:** PDFKit (server-side)
-- **Deployment:** Docker
+- **Deployment:** Docker, PWA
 
 ## License
 
 Apache 2.0
+
+---
+
+## 📱 Mobile App (PWA)
+
+Klar kann als Progressive Web App auf deinem Handy installiert werden!
+
+### Setup für Handy-Zugriff
+
+1. **Finde die IP-Adresse deines PCs:**
+   ```bash
+   # Windows (PowerShell)
+   ipconfig
+   # Suche nach "IPv4 Address" unter deinem Netzwerk-Adapter (z.B. 192.168.1.100)
+   ```
+
+2. **Starte den Server mit externer Erreichbarkeit:**
+   ```bash
+   npm start
+   ```
+
+3. **Öffne auf deinem Handy:**
+   ```
+   http://192.168.1.100:3000
+   ```
+   (Ersetze mit deiner IP-Adresse)
+
+4. **Installiere die App:**
+   - **Android (Chrome):** Menü (⋮) → "App installieren" oder "Zum Startbildschirm hinzufügen"
+   - **iOS (Safari):** Teilen-Button → "Zum Home-Bildschirm"
+
+### Voraussetzungen
+- PC und Handy müssen im gleichen WLAN sein
+- Der Server auf dem PC muss laufen
+
+### Alternative: Termux (Echte Standalone-App)
+
+Für eine vollständig standalone Android-App ohne PC:
+
+1. Installiere [Termux](https://f-droid.org/en/packages/com.termux/) von F-Droid
+2. In Termux:
+   ```bash
+   pkg update && pkg install nodejs git
+   git clone <your-repo-url> klar
+   cd klar
+   npm install
+   npm start
+   ```
+3. Öffne `http://localhost:3000` im Android-Browser
+

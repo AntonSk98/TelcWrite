@@ -4,7 +4,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 // Resolved paths
-const DB_PATH = path.resolve(process.env.DB_PATH || path.join(__dirname, 'db.json'));
+const DB_PATH = path.resolve(process.env.DB_PATH || path.join(__dirname, 'klar.sqlite'));
 const VIEWS_DIR = path.join(__dirname, '..', 'views');
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
